@@ -1,0 +1,12 @@
+{
+  "name": "lil-todo-list",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A cute pixel todo list with bunnies and flowers.",
+  "scripts": {
+    "dev": "npx wrangler@latest dev",
+    "deploy": "npx wrangler@latest deploy",
+    "favicon": "node scripts/favicon.js"
+  }
+}
