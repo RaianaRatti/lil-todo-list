@@ -9,11 +9,14 @@ Plain static HTML/CSS/JS with no build step. Everything is saved in the browser 
 - Add **titles** inside a list ("add as: title") and put subtasks under each one.
 - Double-click any task or title to edit it.
 
+## Demo
+![alt text](images/top-page.png)
+![alt text](images/bottom-page.png)
+
 ## Run locally
 
 ```sh
-npm run dev          # Cloudflare's local server (wrangler) at http://localhost:8788
-# or any static server:
+npm run dev
 python3 -m http.server -d public 8000
 ```
 
