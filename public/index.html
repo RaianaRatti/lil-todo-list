@@ -74,9 +74,21 @@
         </div>
 
         <footer class="card-foot">
-          <span id="count" aria-live="polite"></span>
+          <span class="tally" aria-live="polite">
+            <span id="count"></span>
+            <button type="button" id="show-done" class="link" aria-expanded="false" aria-controls="done-panel" hidden></button>
+          </span>
           <button type="button" id="del-list" class="link">delete list</button>
         </footer>
+
+        <div id="done-panel" class="done-panel" hidden>
+          <div class="done-head">
+            <h2>finished <i data-sprite="heartSolid" data-scale="2"></i></h2>
+            <button type="button" id="clear-done" class="link">clear</button>
+          </div>
+          <ul id="done-list" class="done-list"></ul>
+          <p id="done-older" class="done-older" hidden></p>
+        </div>
       </section>
     </div>
 

@@ -74,7 +74,7 @@ main {
   z-index: 1;
   flex: 1;
   width: 100%;
-  max-width: 580px;
+  max-width: 680px;
   margin: 0 auto;
   padding: 40px 16px 56px;
 }
@@ -219,7 +219,7 @@ h1 {
 .text {
   flex: 1;
   min-width: 0;
-  font-size: 25px;
+  font-size: 22px;
   overflow-wrap: anywhere;
   cursor: text;
   user-select: none;
@@ -231,7 +231,7 @@ h1 {
   min-width: 0;
   border: 0;
   font: inherit;
-  font-size: 25px;
+  font-size: 22px;
   color: var(--ink);
   padding: 0 6px;
 }
@@ -267,6 +267,9 @@ h1 {
   font-size: 9px;
   color: var(--muted);
 }
+.tally { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.tally .link[aria-expanded="true"] { color: var(--ink); background: var(--pink-2); }
+
 .link {
   border: 0;
   background: none;
@@ -277,6 +280,38 @@ h1 {
   background: linear-gradient(transparent 70%, var(--pink-2) 70%);
 }
 .link:hover { color: var(--ink); background: var(--pink-2); }
+
+/* ---------- finished tasks ---------- */
+.done-panel {
+  margin-top: 14px;
+  padding-top: 12px;
+  background: linear-gradient(90deg, var(--pink-3) 50%, transparent 0) top / 12px 3px repeat-x;
+}
+.done-panel[hidden] { display: none; }
+.done-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 6px; }
+.done-head h2 { margin: 0; font-family: var(--pixel); font-weight: 400; font-size: 10px; color: var(--muted); }
+.done-head .link, .bring-back { font-family: var(--pixel); font-size: 8px; }
+.done-list { list-style: none; margin: 0; padding: 0; max-height: 320px; overflow-y: auto; }
+.done-item {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 6px;
+  color: var(--muted);
+  background: linear-gradient(90deg, var(--pink-2) 50%, transparent 0) bottom / 12px 3px repeat-x;
+}
+.done-item:hover { background-color: var(--pink-1); }
+.done-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 20px;
+  overflow-wrap: anywhere;
+  text-decoration: line-through;
+  text-decoration-color: var(--pink-4);
+}
+.done-from { flex: none; max-width: 40%; font-size: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bring-back { flex: none; white-space: nowrap; }
+.done-older { margin: 8px 0 0; font-size: 18px; color: var(--muted); }
 
 /* ---------- chips (mode toggle, list tabs) ---------- */
 .chip {
@@ -303,7 +338,7 @@ h1 {
 
 /* ---------- deck of list cards ---------- */
 .deck { position: relative; }
-@media (max-width: 620px) { .deck { margin-right: 12px; } } /* room for the stacked cards */
+@media (max-width: 720px) { .deck { margin-right: 12px; } } /* room for the stacked cards */
 
 .stack {
   --ink: var(--pink-3);
@@ -355,12 +390,13 @@ h1 {
   flex: 1;
   min-width: 0;
   font-family: var(--pixel);
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.7;
   overflow-wrap: anywhere;
-  cursor: text;
+  cursor: pointer;
   user-select: none;
 }
+.title-text:hover span { background-color: var(--pink-1); }
 .title-text span {
   background: linear-gradient(transparent 45%, var(--pink-2) 45%, var(--pink-2) 95%, transparent 95%);
   padding: 0 4px;
@@ -373,24 +409,11 @@ h1 {
   background: linear-gradient(var(--pink-3) 50%, transparent 0) left / 3px 12px repeat-y;
 }
 
-.add-sub {
-  display: block;
-  width: 100%;
-  text-align: left;
-  border: 0;
-  background: none;
-  cursor: pointer;
-  font: inherit;
-  font-size: 22px;
-  color: var(--muted);
-  padding: 8px 6px;
-}
-.add-sub:hover { color: var(--ink); background: var(--pink-1); }
 
-.edit.title-edit { font-family: var(--pixel); font-size: 12px; padding: 6px; }
+.edit.title-edit { font-family: var(--pixel); font-size: 14px; padding: 6px; }
 .sub-tail { list-style: none; }
 .sub-form { padding: 8px 6px 8px 4px; }
-.sub-form .field { width: 100%; font-size: 22px; padding: 4px 10px; }
+.sub-form .field { width: 100%; font-size: 20px; padding: 4px 10px; }
 
 /* ---------- list navigation ---------- */
 .lists-nav {
@@ -536,4 +559,15 @@ h1 {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .hopper { left: 70%; }
+}
+
+/* ---------- phones ---------- */
+@media (max-width: 480px) {
+  main { padding-left: 12px; padding-right: 12px; }
+  .card { padding: 20px 14px 14px; }
+  .title-text, .edit.title-edit { font-size: 12px; }
+  .text, .edit { font-size: 21px; }
+  .subs { margin-left: 10px; padding-left: 10px; }
+  .done-item { flex-wrap: wrap; }
+  .done-from { order: 3; flex-basis: 100%; max-width: none; }
 }

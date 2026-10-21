@@ -25,14 +25,21 @@ const task = (text) => ({ id: uid(), text });
 const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 // ---------- state ----------
-// { current: index, lists: [{ id, name, done, tasks: [task], titles: [{ id, text, tasks: [task] }] }] }
+// { current: index, mode: 'task' | 'title',
+//   lists: [{ id, name, tasks: [task], titles: [{ id, text, tasks: [task] }],
+//             done: [{ id, text, from: title id | null, fromText, index }], doneBefore: count }] }
+// `done` is newest first; `doneBefore` counts finishes from before they were kept.
+
+const DONE_LIMIT = 200;
+const newList = (name) => ({ id: uid(), name, tasks: [], titles: [], done: [], doneBefore: 0 });
 
 function starterState() {
   return {
     current: 0,
+    mode: 'task',
     lists: [
       {
-        id: uid(), name: 'today', done: 0,
+        id: uid(), name: 'today', done: [], doneBefore: 0,
         tasks: [task('water the flowers'), task('be kind to yourself')],
         titles: [
           { id: uid(), text: 'groceries', tasks: [task('strawberries'), task('carrots for the bunny'), task('oat milk')] },
@@ -40,7 +47,7 @@ function starterState() {
         ],
       },
       {
-        id: uid(), name: 'someday', done: 0,
+        id: uid(), name: 'someday', done: [], doneBefore: 0,
         tasks: [task('learn to crochet')],
         titles: [{ id: uid(), text: 'trips', tasks: [task('picnic in the park'), task('visit a flower farm')] }],
       },
@@ -56,14 +63,25 @@ function normalize(raw) {
   const lists = raw.lists.map((l) => ({
     id: String(l.id || uid()),
     name: typeof l.name === 'string' && l.name.trim() ? l.name : 'my list',
-    done: Number(l.done) || 0,
+    // older saves kept only a count of finished tasks
+    done: (Array.isArray(l.done) ? l.done : [])
+      .filter((d) => d && typeof d.text === 'string')
+      .slice(0, DONE_LIMIT)
+      .map((d) => ({
+        id: String(d.id || uid()),
+        text: d.text,
+        from: d.from ? String(d.from) : null,
+        fromText: typeof d.fromText === 'string' ? d.fromText : null,
+        index: Number(d.index) || 0,
+      })),
+    doneBefore: Array.isArray(l.done) ? Number(l.doneBefore) || 0 : Number(l.done) || 0,
     tasks: cleanTasks(l.tasks),
     titles: (Array.isArray(l.titles) ? l.titles : [])
       .filter((t) => t && typeof t.text === 'string')
       .map((t) => ({ id: String(t.id || uid()), text: t.text, tasks: cleanTasks(t.tasks) })),
   }));
   const current = Math.min(Math.max(Number(raw.current) || 0, 0), lists.length - 1);
-  return { current, lists };
+  return { current, mode: raw.mode === 'title' ? 'title' : 'task', lists };
 }
 
 function load() {
@@ -74,7 +92,7 @@ function load() {
     const old = JSON.parse(localStorage.getItem(OLD_KEY));
     if (Array.isArray(old) && old.length) {
       const tasks = old.filter((t) => t && !t.done && typeof t.text === 'string').map((t) => task(t.text));
-      return { current: 0, lists: [{ id: uid(), name: 'my list', done: 0, tasks, titles: [] }] };
+      return { current: 0, mode: 'task', lists: [{ ...newList('my list'), tasks }] };
     }
   } catch {
     // fall through to the starter lists
@@ -91,8 +109,8 @@ function save() {
 }
 
 let state = load() ?? starterState();
-let mode = 'task';
 let openSubFor = null; // title id whose "add subtask" field is open
+let showDone = false;
 let rendering = false;
 let animating = false;
 
@@ -133,10 +151,12 @@ function remaining(l = cur()) {
   return l.tasks.length + l.titles.reduce((n, t) => n + t.tasks.length, 0);
 }
 
+const doneCount = (l = cur()) => l.done.length + l.doneBefore;
+
 function moodText() {
   const l = cur();
   const left = remaining(l);
-  if (!left) return l.done ? 'all done! nap time' : 'add something~';
+  if (!left) return doneCount(l) ? 'all done! nap time' : 'add something~';
   if (left === 1) return 'just one more!';
   return 'you got this!';
 }
@@ -170,12 +190,17 @@ function taskEl(t) {
   return li;
 }
 
-function addSubButton() {
-  const add = document.createElement('button');
-  add.type = 'button';
-  add.className = 'add-sub';
-  add.textContent = '+ add subtask';
-  return add;
+function subForm(title) {
+  const f = document.createElement('form');
+  f.className = 'sub-form';
+  f.autocomplete = 'off';
+  const field = document.createElement('input');
+  field.className = 'field px';
+  field.placeholder = `add to ${title.text}...`;
+  field.maxLength = 140;
+  field.setAttribute('aria-label', `New subtask under "${title.text}"`);
+  f.append(field);
+  return f;
 }
 
 function groupEl(title) {
@@ -191,6 +216,7 @@ function groupEl(title) {
   flower.setAttribute('aria-hidden', 'true');
   const heading = document.createElement('h3');
   heading.className = 'title-text';
+  heading.title = 'click to add a subtask · double-click to rename';
   const inner = document.createElement('span');
   inner.textContent = title.text;
   heading.append(inner);
@@ -200,22 +226,10 @@ function groupEl(title) {
   subs.className = 'subs';
   subs.append(...title.tasks.map(taskEl));
 
+  // the new-subtask field only appears once you ask for it
   const tail = document.createElement('li');
   tail.className = 'sub-tail';
-  if (openSubFor === title.id) {
-    const f = document.createElement('form');
-    f.className = 'sub-form';
-    f.autocomplete = 'off';
-    const field = document.createElement('input');
-    field.className = 'field px';
-    field.placeholder = `add to ${title.text}...`;
-    field.maxLength = 140;
-    field.setAttribute('aria-label', `New subtask under "${title.text}"`);
-    f.append(field);
-    tail.append(f);
-  } else {
-    tail.append(addSubButton());
-  }
+  if (openSubFor === title.id) tail.append(subForm(title));
   subs.append(tail);
 
   li.append(row, subs);
@@ -245,6 +259,33 @@ function tabsRender() {
   if (active) tabs.scrollLeft = active.offsetLeft - tabs.clientWidth / 2 + active.offsetWidth / 2;
 }
 
+function doneRender(l) {
+  $('#done-panel').hidden = !showDone;
+  if (!showDone) return;
+  $('#done-list').replaceChildren(...l.done.map((d) => {
+    const li = document.createElement('li');
+    li.className = 'done-item';
+    li.dataset.done = d.id;
+    const text = document.createElement('span');
+    text.className = 'done-text';
+    text.textContent = d.text;
+    const from = document.createElement('span');
+    from.className = 'done-from';
+    from.textContent = d.fromText ?? 'main list';
+    const back = document.createElement('button');
+    back.type = 'button';
+    back.className = 'link bring-back';
+    back.textContent = 'bring back';
+    back.setAttribute('aria-label', `bring back "${d.text}" to ${d.fromText ?? 'the main list'}`);
+    li.append(text, from, back);
+    return li;
+  }));
+  const older = $('#done-older');
+  older.hidden = !l.doneBefore;
+  older.textContent = `+ ${l.doneBefore} older ${l.doneBefore === 1 ? 'one' : 'ones'} (from before they were saved)`;
+  $('#clear-done').hidden = !l.done.length;
+}
+
 function sizeName() {
   nameInput.style.width = `calc(${Math.max(nameInput.value.length, 6) + 1}ch + 20px)`;
 }
@@ -257,9 +298,17 @@ function render() {
   mountSprites(list);
 
   const isEmpty = !l.tasks.length && !l.titles.length;
+  const finished = doneCount(l);
   $('#empty').hidden = !isEmpty;
-  $('#empty-text').textContent = l.done ? 'all done! the bunny is napping' : 'nothing here yet...';
-  $('#count').textContent = `${remaining(l)} left${l.done ? ` · ${l.done} done <3` : ''}`;
+  $('#empty-text').textContent = finished ? 'all done! the bunny is napping' : 'nothing here yet...';
+  $('#count').textContent = `${remaining(l)} left${finished ? ' ·' : ''}`;
+  const showBtn = $('#show-done');
+  showBtn.hidden = !finished;
+  showBtn.textContent = `${finished} done <3`;
+  if (!finished) showDone = false;
+  showBtn.setAttribute('aria-expanded', String(showDone));
+  doneRender(l);
+  syncMode();
 
   if (document.activeElement !== nameInput) nameInput.value = l.name;
   sizeName();
@@ -302,9 +351,9 @@ function burst(rect) {
 
 function findTask(id) {
   const l = cur();
-  for (const arr of [l.tasks, ...l.titles.map((t) => t.tasks)]) {
+  for (const [title, arr] of [[null, l.tasks], ...l.titles.map((t) => [t, t.tasks])]) {
     const i = arr.findIndex((t) => t.id === id);
-    if (i !== -1) return { arr, i, task: arr[i] };
+    if (i !== -1) return { arr, i, task: arr[i], title };
   }
   return null;
 }
@@ -313,11 +362,17 @@ const findTitle = (id) => cur().titles.find((t) => t.id === id);
 
 // ---------- adding ----------
 
-function setMode(m) {
-  mode = m;
+function syncMode() {
   document.querySelectorAll('[data-mode]').forEach((b) =>
-    b.setAttribute('aria-pressed', String(b.dataset.mode === mode)));
-  input.placeholder = mode === 'title' ? 'new title, e.g. groceries' : 'what needs doing?';
+    b.setAttribute('aria-pressed', String(b.dataset.mode === state.mode)));
+  input.placeholder = state.mode === 'title' ? 'new title, e.g. groceries' : 'what needs doing?';
+}
+
+// remembered between visits, so the next add uses whatever you picked last
+function setMode(m) {
+  state.mode = m;
+  save();
+  syncMode();
 }
 
 document.querySelectorAll('[data-mode]').forEach((b) =>
@@ -328,11 +383,10 @@ form.addEventListener('submit', (e) => {
   const text = input.value.trim();
   if (!text) return;
   input.value = '';
-  if (mode === 'title') {
+  if (state.mode === 'title') {
     const title = { id: uid(), text, tasks: [] };
     cur().titles.push(title);
     openSubFor = title.id; // jump straight into adding its subtasks
-    setMode('task');
     commit();
     say('ooh, a new section!');
   } else {
@@ -348,24 +402,47 @@ list.addEventListener('submit', (e) => {
   e.preventDefault();
   const text = e.target.querySelector('.field').value.trim();
   const title = findTitle(e.target.closest('.group').dataset.title);
-  if (!text || !title) return;
+  if (!title) return;
+  if (!text) return closeSubForm(e.target); // enter on an empty field means "done adding"
   title.tasks.push(task(text));
   commit(); // the field re-opens focused, ready for the next subtask
   say('added! <3');
 });
 
-function closeSubForm() {
-  openSubFor = null;
-  const tail = list.querySelector('.sub-form')?.closest('.sub-tail');
-  tail?.replaceChildren(addSubButton());
+// opens the new-subtask field under a title without re-rendering the list
+// (re-rendering would swallow a double-click meant for renaming the title)
+function openSubForm(group) {
+  const title = findTitle(group.dataset.title);
+  const tail = group.querySelector('.sub-tail');
+  if (!title || !tail) return;
+  openSubFor = title.id;
+  if (!tail.querySelector('.sub-form')) tail.replaceChildren(subForm(title));
+  tail.querySelector('.field').focus();
+}
+
+function closeSubForm(form) {
+  if (form.dataset.closing) return; // removing it fires focusout, which lands back here
+  form.dataset.closing = '1';
+  if (openSubFor === form.closest('.group')?.dataset.title) openSubFor = null;
+  form.remove();
 }
 
 list.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && e.target.closest('.sub-form')) closeSubForm();
+  const form = e.target.closest('.sub-form');
+  if (e.key === 'Escape' && form) closeSubForm(form);
+  // enter on the last subtask's checkbox starts the next one
+  if (e.key === 'Enter' && e.target.matches('.todo input[type="checkbox"]')) {
+    const row = e.target.closest('.todo');
+    if (row.closest('.subs') && !row.nextElementSibling?.matches('.todo')) {
+      e.preventDefault();
+      openSubForm(row.closest('.group'));
+    }
+  }
 });
 
 list.addEventListener('focusout', (e) => {
-  if (!rendering && e.target.closest('.sub-form')) closeSubForm();
+  const form = e.target.closest('.sub-form');
+  if (!rendering && form) closeSubForm(form);
 });
 
 // ---------- finishing / deleting ----------
@@ -377,16 +454,23 @@ list.addEventListener('change', (e) => {
   const before = JSON.stringify(state);
   burst(e.target.getBoundingClientRect());
   found.arr.splice(found.i, 1);
-  cur().done += 1;
+  // remember where it came from so it can be brought back later
+  cur().done.unshift({
+    id: found.task.id,
+    text: found.task.text,
+    from: found.title?.id ?? null,
+    fromText: found.title?.text ?? null,
+    index: found.i,
+  });
+  cur().done.length = Math.min(cur().done.length, DONE_LIMIT);
   commit();
   offerUndo('done! <3', before);
   say(remaining() ? CHEERS[Math.floor(Math.random() * CHEERS.length)] : 'all done! nap time');
 });
 
 list.addEventListener('click', (e) => {
-  if (e.target.closest('.add-sub')) {
-    openSubFor = e.target.closest('.group').dataset.title;
-    render();
+  if (e.target.closest('.title-text')) {
+    openSubForm(e.target.closest('.group'));
     return;
   }
   const del = e.target.closest('.del');
@@ -414,10 +498,15 @@ list.addEventListener('dblclick', (e) => {
   const item = isTitle
     ? findTitle(span.closest('.group').dataset.title)
     : findTask(span.closest('.todo').dataset.task)?.task;
-  if (item) startEdit(span, item, isTitle);
+  // pressing enter after editing the last subtask under a title starts a new one
+  const row = span.closest('.todo');
+  const nextUnder = row?.closest('.subs') && !row.nextElementSibling?.matches('.todo')
+    ? row.closest('.group').dataset.title
+    : null;
+  if (item) startEdit(span, item, isTitle, nextUnder);
 });
 
-function startEdit(span, item, isTitle) {
+function startEdit(span, item, isTitle, nextUnder = null) {
   const field = document.createElement('input');
   field.className = 'edit px' + (isTitle ? ' title-edit' : '');
   field.value = item.text;
@@ -436,7 +525,11 @@ function startEdit(span, item, isTitle) {
     commit();
   };
   field.addEventListener('keydown', (ev) => {
-    if (ev.key === 'Enter') finish(true);
+    if (ev.key === 'Enter') {
+      ev.preventDefault(); // or this same keypress would submit the field that opens next
+      if (nextUnder) openSubFor = nextUnder;
+      finish(true);
+    }
     if (ev.key === 'Escape') finish(false);
   });
   field.addEventListener('blur', () => finish(true));
@@ -459,6 +552,7 @@ function go(index, dir = index > state.current ? 1 : -1) {
   index = (index + n) % n;
   if (index === state.current || animating) return;
   openSubFor = null;
+  showDone = false;
   if (document.activeElement === nameInput) nameInput.blur();
   const swap = () => {
     state.current = index;
@@ -487,7 +581,7 @@ $('#next').addEventListener('click', () => go(state.current + 1, 1));
 
 tabs.addEventListener('click', (e) => {
   if (e.target.closest('#add-list')) {
-    state.lists.push({ id: uid(), name: `list ${state.lists.length + 1}`, done: 0, tasks: [], titles: [] });
+    state.lists.push(newList(`list ${state.lists.length + 1}`));
     save();
     go(state.lists.length - 1, 1);
     // name it right away once the new card is showing
@@ -526,6 +620,48 @@ card.addEventListener('touchend', (e) => {
   if (Math.abs(dx) > 60) go(state.current + (dx < 0 ? 1 : -1), dx < 0 ? 1 : -1);
 });
 
+// ---------- finished tasks ----------
+
+$('#show-done').addEventListener('click', () => {
+  showDone = !showDone;
+  render();
+  if (showDone) $('#done-panel').scrollIntoView({ block: 'nearest', behavior: reducedMotion() ? 'auto' : 'smooth' });
+});
+
+// puts a finished task back where it was: same title (re-created if it was deleted), same spot
+function bringBack(id) {
+  const l = cur();
+  const i = l.done.findIndex((d) => d.id === id);
+  if (i === -1) return;
+  const [d] = l.done.splice(i, 1);
+  let arr = l.tasks;
+  if (d.from) {
+    let title = l.titles.find((t) => t.id === d.from)
+      ?? l.titles.find((t) => t.text === d.fromText);
+    if (!title) {
+      title = { id: d.from, text: d.fromText ?? 'brought back', tasks: [] };
+      l.titles.push(title);
+    }
+    arr = title.tasks;
+  }
+  arr.splice(Math.min(d.index, arr.length), 0, { id: d.id, text: d.text });
+  commit();
+  list.querySelector(`[data-task="${CSS.escape(d.id)}"]`)?.classList.add('pop');
+  say('welcome back!');
+}
+
+$('#done-list').addEventListener('click', (e) => {
+  const back = e.target.closest('.bring-back');
+  if (back) bringBack(back.closest('.done-item').dataset.done);
+});
+
+$('#clear-done').addEventListener('click', () => {
+  const before = JSON.stringify(state);
+  cur().done = [];
+  commit();
+  offerUndo('finished list cleared', before);
+});
+
 peekBunny.addEventListener('click', () => say(['boop!', 'hehe', 'hi friend!', moodText()][Math.floor(Math.random() * 4)]));
 
 // keep in sync across open tabs
@@ -540,9 +676,10 @@ window.addEventListener('storage', (e) => {
 mountSprites();
 document.documentElement.style.setProperty('--sprite-heart', spriteURL('heart'));
 $('#grass').style.backgroundImage = spriteURL('grass');
-$('#date').textContent = new Date()
+const today = new Date()
   .toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
   .toLowerCase();
+$('#date').textContent = today[0].toUpperCase() + today.slice(1);
 
 render();
 bubble.textContent = moodText();
