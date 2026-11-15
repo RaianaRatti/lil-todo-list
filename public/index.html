@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>lil todo list</title>
-  <meta name="description" content="A cute pixel todo list with bunnies, flowers and hearts.">
-  <meta name="theme-color" content="#ffd6e7">
+  <meta name="description" content="A pixel-art pocket journal for your todos, kept by a very cool bunny.">
+  <meta name="theme-color" content="#1e1b29">
   <meta property="og:title" content="lil todo list">
-  <meta property="og:description" content="A cute pixel todo list with bunnies, flowers and hearts.">
+  <meta property="og:description" content="A pixel-art pocket journal for your todos, kept by a very cool bunny.">
   <meta property="og:type" content="website">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="preload" href="fonts/press-start-2p.woff2" as="font" type="font/woff2" crossorigin>
@@ -16,87 +16,93 @@
   <script type="module" src="app.js"></script>
 </head>
 <body>
-  <!-- floating decorations -->
+  <!-- things on the desk -->
   <div class="deco" aria-hidden="true">
-    <i data-sprite="cloud" data-scale="5" class="d cloud c1"></i>
-    <i data-sprite="cloud" data-scale="4" class="d cloud c2"></i>
-    <i data-sprite="sparkle" data-scale="4" class="d twinkle s1"></i>
-    <i data-sprite="sparkle" data-scale="3" class="d twinkle s2"></i>
-    <i data-sprite="sparkle" data-scale="4" class="d twinkle s3"></i>
-    <i data-sprite="sparkle" data-scale="3" class="d twinkle s4"></i>
-    <i data-sprite="heart" data-scale="4" class="d bob h1"></i>
-    <i data-sprite="heart" data-scale="3" class="d bob h2"></i>
-    <i data-sprite="strawberry" data-scale="4" class="d bob st1"></i>
-    <i data-sprite="carrot" data-scale="4" class="d bob ca1"></i>
-    <i data-sprite="bow" data-scale="4" class="d bob b1"></i>
+    <i data-sprite="moon" data-scale="5" class="d moon"></i>
+    <i data-sprite="sparkle" data-scale="3" class="d twinkle s1"></i>
+    <i data-sprite="sparkle" data-scale="2" class="d twinkle s2"></i>
+    <i data-sprite="sparkle" data-scale="3" class="d twinkle s3"></i>
+    <i data-sprite="sparkle" data-scale="2" class="d twinkle s4"></i>
+    <i data-sprite="dot" data-scale="2" class="d twinkle s5"></i>
+    <i data-sprite="dot" data-scale="2" class="d twinkle s6"></i>
+    <i data-sprite="mug" data-scale="5" class="d mug"></i>
+    <i data-sprite="pencil" data-scale="4" class="d pencil"></i>
   </div>
 
   <main>
     <header class="hero">
-      <i data-sprite="bow" data-scale="4"></i>
+      <p class="eyebrow">a pocket journal</p>
       <h1><span class="hl">lil todo</span> list</h1>
       <p class="date" id="date"></p>
     </header>
 
-    <div class="deck" id="deck">
-      <div class="stack px back1" aria-hidden="true"></div>
-      <div class="stack px back2" aria-hidden="true"></div>
+    <div class="book">
+      <div class="deck" id="deck">
+        <div class="stack px back1" aria-hidden="true"></div>
+        <div class="stack px back2" aria-hidden="true"></div>
+        <i data-sprite="corner" data-scale="3" class="corner tl" aria-hidden="true"></i>
+        <i data-sprite="corner" data-scale="3" class="corner tr" aria-hidden="true"></i>
+        <i data-sprite="corner" data-scale="3" class="corner bl" aria-hidden="true"></i>
+        <i data-sprite="corner" data-scale="3" class="corner br" aria-hidden="true"></i>
+        <i data-sprite="ribbon" data-scale="4" class="ribbon" aria-hidden="true"></i>
 
-      <section class="card px" id="card" aria-label="Current list">
-        <div class="peek" aria-hidden="true">
-          <p class="bubble px" id="bubble">hi there!</p>
-          <i data-sprite="bunny" data-scale="4" class="peek-bunny" id="peek-bunny"></i>
-        </div>
-
-        <div class="card-head">
-          <label for="list-name" class="sr-only">List name</label>
-          <input id="list-name" class="label-tag px" maxlength="24" spellcheck="false">
-          <span class="pager" id="pager"></span>
-        </div>
-
-        <form id="new" class="add" autocomplete="off">
-          <label for="new-text" class="sr-only">New item</label>
-          <input id="new-text" class="field px" placeholder="what needs doing?" maxlength="140" required>
-          <button class="btn px" type="submit">add <i data-sprite="heartSolid" data-scale="2"></i></button>
-        </form>
-
-        <div class="mode" role="group" aria-label="Add as">
-          <span class="mode-label">add as:</span>
-          <button type="button" class="chip px" data-mode="task" aria-pressed="true">task</button>
-          <button type="button" class="chip px" data-mode="title" aria-pressed="false">title</button>
-        </div>
-
-        <ul id="list" class="list"></ul>
-
-        <div id="empty" class="empty" hidden>
-          <i data-sprite="bunnySleep" data-scale="4"></i>
-          <p id="empty-text">nothing here yet...</p>
-        </div>
-
-        <footer class="card-foot">
-          <span class="tally" aria-live="polite">
-            <span id="count"></span>
-            <button type="button" id="show-done" class="link" aria-expanded="false" aria-controls="done-panel" hidden></button>
-          </span>
-          <button type="button" id="del-list" class="link">delete list</button>
-        </footer>
-
-        <div id="done-panel" class="done-panel" hidden>
-          <div class="done-head">
-            <h2>finished <i data-sprite="heartSolid" data-scale="2"></i></h2>
-            <button type="button" id="clear-done" class="link">clear</button>
+        <section class="card px" id="card" aria-label="Current list">
+          <div class="peek" aria-hidden="true">
+            <p class="bubble px" id="bubble">yo.</p>
+            <i data-sprite="bunny" data-scale="4" class="peek-bunny" id="peek-bunny"></i>
           </div>
-          <ul id="done-list" class="done-list"></ul>
-          <p id="done-older" class="done-older" hidden></p>
-        </div>
-      </section>
-    </div>
 
-    <nav class="lists-nav" aria-label="Your lists">
-      <button type="button" class="arrow px" id="prev" aria-label="Previous list">&lt;</button>
-      <div class="tabs" id="tabs"></div>
-      <button type="button" class="arrow px" id="next" aria-label="Next list">&gt;</button>
-    </nav>
+          <div class="card-head">
+            <span class="chapter" id="chapter" aria-hidden="true"></span>
+            <label for="list-name" class="sr-only">List name</label>
+            <input id="list-name" class="chapter-name" maxlength="24" spellcheck="false">
+          </div>
+
+          <form id="new" class="add" autocomplete="off">
+            <label for="new-text" class="sr-only">New item</label>
+            <input id="new-text" class="field px" placeholder="what needs doing?" maxlength="140" required>
+            <button class="btn px" type="submit">add</button>
+          </form>
+
+          <div class="mode" role="group" aria-label="Add as">
+            <span class="mode-label">add as:</span>
+            <button type="button" class="chip px" data-mode="task" aria-pressed="true">task</button>
+            <button type="button" class="chip px" data-mode="title" aria-pressed="false">title</button>
+          </div>
+
+          <ul id="list" class="list"></ul>
+
+          <div id="empty" class="empty" hidden>
+            <i data-sprite="bunnySleep" data-scale="4"></i>
+            <p id="empty-text">blank page...</p>
+          </div>
+
+          <footer class="card-foot">
+            <span class="tally" aria-live="polite">
+              <span id="count"></span>
+              <button type="button" id="show-done" class="link" aria-expanded="false" aria-controls="done-panel" hidden></button>
+            </span>
+            <span class="pager" id="pager"></span>
+            <button type="button" id="del-list" class="link">delete list</button>
+          </footer>
+
+          <div id="done-panel" class="done-panel" hidden>
+            <div class="done-head">
+              <h2>crossed off <i data-sprite="check" data-scale="2"></i></h2>
+              <button type="button" id="clear-done" class="link">clear</button>
+            </div>
+            <ul id="done-list" class="done-list"></ul>
+            <p id="done-older" class="done-older" hidden></p>
+          </div>
+        </section>
+      </div>
+
+      <nav class="lists-nav" aria-label="Your lists">
+        <button type="button" class="arrow px" id="prev" aria-label="Previous list">&lt;</button>
+        <div class="tabs" id="tabs"></div>
+        <button type="button" class="arrow px" id="next" aria-label="Next list">&gt;</button>
+      </nav>
+    </div>
   </main>
 
   <div class="toast px" id="toast" role="status" hidden>
@@ -105,23 +111,37 @@
   </div>
 
   <div class="ground" aria-hidden="true">
-    <div class="garden">
-      <i data-sprite="flower" data-scale="3"></i>
-      <i data-sprite="flowerLilac" data-scale="2"></i>
-      <i data-sprite="flowerSun" data-scale="3"></i>
-      <i data-sprite="flower" data-scale="2"></i>
-      <i data-sprite="flowerLilac" data-scale="3"></i>
-      <i data-sprite="flowerSun" data-scale="2"></i>
-      <i data-sprite="flower" data-scale="3"></i>
-      <i data-sprite="flowerLilac" data-scale="2"></i>
-      <i data-sprite="flowerSun" data-scale="3"></i>
-      <i data-sprite="flower" data-scale="2"></i>
-      <i data-sprite="flowerLilac" data-scale="3"></i>
-      <i data-sprite="flower" data-scale="3"></i>
+    <div class="shelf">
+      <div class="books">
+        <i data-sprite="spineRed" data-scale="3"></i>
+        <i data-sprite="spineShortGold" data-scale="3"></i>
+        <i data-sprite="spineWide" data-scale="3"></i>
+        <i data-sprite="spinePlum" data-scale="3"></i>
+        <i data-sprite="spineShortNavy" data-scale="3"></i>
+      </div>
+      <div class="books">
+        <i data-sprite="spineWideBrown" data-scale="3"></i>
+        <i data-sprite="spineNavy" data-scale="3"></i>
+        <i data-sprite="spineShortRed" data-scale="3"></i>
+        <i data-sprite="spine" data-scale="3"></i>
+      </div>
+      <div class="books">
+        <i data-sprite="spineGold" data-scale="3"></i>
+        <i data-sprite="spineShortPlum" data-scale="3"></i>
+        <i data-sprite="spineWideRed" data-scale="3"></i>
+        <i data-sprite="spineShort" data-scale="3"></i>
+        <i data-sprite="spineBrown" data-scale="3"></i>
+        <i data-sprite="spineWideNavy" data-scale="3"></i>
+      </div>
+      <div class="books">
+        <i data-sprite="spineShortBrown" data-scale="3"></i>
+        <i data-sprite="spineWidePlum" data-scale="3"></i>
+        <i data-sprite="spineRed" data-scale="3"></i>
+      </div>
     </div>
     <div class="hopper"><i data-sprite="bunny" data-scale="3" class="hop"></i></div>
-    <div class="grass" id="grass"></div>
-    <p class="made">made with <i data-sprite="heartSolid" data-scale="2"></i></p>
+    <div class="plank"></div>
+    <p class="made">made with <i data-sprite="carrot" data-scale="2"></i></p>
   </div>
 </body>
 </html>

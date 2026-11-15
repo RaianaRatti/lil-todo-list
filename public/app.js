@@ -4,8 +4,8 @@ const KEY = 'lil-todos-v2';
 const OLD_KEY = 'lil-todos-v1';
 
 const CHEERS = [
-  'yay! good job!', 'you did it!', 'so proud of u', 'one less thing!', 'hop hop hooray',
-  'keep going~', 'tiny wins!', 'look at you go',
+  'nice.', 'crossed off.', 'smooth.', 'one less thing', 'next!', 'too easy',
+  'keep it moving', 'look at you go',
 ];
 
 const $ = (sel) => document.querySelector(sel);
@@ -135,7 +135,7 @@ $('#undo').addEventListener('click', () => {
   undoSnapshot = null;
   toast.hidden = true;
   commit();
-  say('phew, back again');
+  say('phew. back again');
 });
 
 // ---------- bunny ----------
@@ -156,9 +156,9 @@ const doneCount = (l = cur()) => l.done.length + l.doneBefore;
 function moodText() {
   const l = cur();
   const left = remaining(l);
-  if (!left) return doneCount(l) ? 'all done! nap time' : 'add something~';
-  if (left === 1) return 'just one more!';
-  return 'you got this!';
+  if (!left) return doneCount(l) ? 'all done. nap time' : 'blank page...';
+  if (left === 1) return 'one left. easy.';
+  return 'you got this.';
 }
 
 // ---------- rendering ----------
@@ -210,17 +210,17 @@ function groupEl(title) {
 
   const row = document.createElement('div');
   row.className = 'title-row';
-  const flower = document.createElement('i');
-  flower.dataset.sprite = 'flower';
-  flower.dataset.scale = '2';
-  flower.setAttribute('aria-hidden', 'true');
+  const mark = document.createElement('i');
+  mark.dataset.sprite = 'mark';
+  mark.dataset.scale = '2';
+  mark.setAttribute('aria-hidden', 'true');
   const heading = document.createElement('h3');
   heading.className = 'title-text';
   heading.title = 'click to add a subtask · double-click to rename';
   const inner = document.createElement('span');
   inner.textContent = title.text;
   heading.append(inner);
-  row.append(flower, heading, delButton(`delete title "${title.text}" and its subtasks`));
+  row.append(mark, heading, delButton(`delete title "${title.text}" and its subtasks`));
 
   const subs = document.createElement('ul');
   subs.className = 'subs';
@@ -300,11 +300,11 @@ function render() {
   const isEmpty = !l.tasks.length && !l.titles.length;
   const finished = doneCount(l);
   $('#empty').hidden = !isEmpty;
-  $('#empty-text').textContent = finished ? 'all done! the bunny is napping' : 'nothing here yet...';
+  $('#empty-text').textContent = finished ? 'all done. the bunny is napping' : 'blank page...';
   $('#count').textContent = `${remaining(l)} left${finished ? ' ·' : ''}`;
   const showBtn = $('#show-done');
   showBtn.hidden = !finished;
-  showBtn.textContent = `${finished} done <3`;
+  showBtn.textContent = `${finished} done`;
   if (!finished) showDone = false;
   showBtn.setAttribute('aria-expanded', String(showDone));
   doneRender(l);
@@ -312,7 +312,8 @@ function render() {
 
   if (document.activeElement !== nameInput) nameInput.value = l.name;
   sizeName();
-  $('#pager').textContent = `${state.current + 1} / ${state.lists.length}`;
+  $('#chapter').textContent = `ch. ${state.current + 1}`;
+  $('#pager').textContent = `- ${state.current + 1} -`;
   $('#del-list').hidden = state.lists.length === 1;
   $('#prev').disabled = $('#next').disabled = state.lists.length === 1;
   deck.dataset.count = Math.min(state.lists.length, 3);
@@ -329,21 +330,22 @@ function commit() {
 
 function burst(rect) {
   if (reducedMotion()) return;
-  const { w, h } = spriteSize('heartSolid');
   for (let i = 0; i < 7; i++) {
-    const heart = document.createElement('i');
-    heart.className = 'sprite burst';
+    const bit = document.createElement('i');
+    bit.className = 'sprite burst';
+    const name = i % 3 === 0 ? 'spark' : 'sparkle';
+    const { w, h } = spriteSize(name);
     const scale = 2 + (i % 2);
-    heart.style.width = `${w * scale}px`;
-    heart.style.height = `${h * scale}px`;
-    heart.style.backgroundImage = spriteURL(i % 3 === 0 ? 'sparkle' : 'heartSolid');
-    heart.style.left = `${rect.left + rect.width / 2 - 7}px`;
-    heart.style.top = `${rect.top + rect.height / 2 - 6}px`;
+    bit.style.width = `${w * scale}px`;
+    bit.style.height = `${h * scale}px`;
+    bit.style.backgroundImage = spriteURL(name);
+    bit.style.left = `${rect.left + rect.width / 2 - (w * scale) / 2}px`;
+    bit.style.top = `${rect.top + rect.height / 2 - (h * scale) / 2}px`;
     const angle = (Math.PI * 2 * i) / 7 - Math.PI / 2;
-    heart.style.setProperty('--dx', `${Math.round(Math.cos(angle) * 48)}px`);
-    heart.style.setProperty('--dy', `${Math.round(Math.sin(angle) * 48) - 16}px`);
-    heart.addEventListener('animationend', () => heart.remove());
-    document.body.append(heart);
+    bit.style.setProperty('--dx', `${Math.round(Math.cos(angle) * 48)}px`);
+    bit.style.setProperty('--dy', `${Math.round(Math.sin(angle) * 48) - 16}px`);
+    bit.addEventListener('animationend', () => bit.remove());
+    document.body.append(bit);
   }
 }
 
@@ -388,12 +390,12 @@ form.addEventListener('submit', (e) => {
     cur().titles.push(title);
     openSubFor = title.id; // jump straight into adding its subtasks
     commit();
-    say('ooh, a new section!');
+    say('new section.');
   } else {
     cur().tasks.push(task(text));
     commit();
     list.querySelector(`:scope > .todo:nth-child(${cur().tasks.length})`)?.classList.add('pop');
-    say('added! <3');
+    say('noted.');
   }
 });
 
@@ -406,7 +408,7 @@ list.addEventListener('submit', (e) => {
   if (!text) return closeSubForm(e.target); // enter on an empty field means "done adding"
   title.tasks.push(task(text));
   commit(); // the field re-opens focused, ready for the next subtask
-  say('added! <3');
+  say('noted.');
 });
 
 // opens the new-subtask field under a title without re-rendering the list
@@ -464,8 +466,8 @@ list.addEventListener('change', (e) => {
   });
   cur().done.length = Math.min(cur().done.length, DONE_LIMIT);
   commit();
-  offerUndo('done! <3', before);
-  say(remaining() ? CHEERS[Math.floor(Math.random() * CHEERS.length)] : 'all done! nap time');
+  offerUndo('crossed off', before);
+  say(remaining() ? CHEERS[Math.floor(Math.random() * CHEERS.length)] : 'all done. nap time');
 });
 
 list.addEventListener('click', (e) => {
@@ -561,19 +563,18 @@ function go(index, dir = index > state.current ? 1 : -1) {
   };
   if (reducedMotion()) return swap();
 
-  // the top card slides off, then the next one rises from the stack
+  // going forward, the page turns over at the spine to show the next one underneath;
+  // going back, the previous page swings back over
   // (timers rather than animationend, which never fires in background tabs)
   animating = true;
-  card.classList.add(dir > 0 ? 'out-next' : 'out-prev');
+  if (dir < 0) swap();
+  const turn = dir > 0 ? 'turn-out' : 'turn-in';
+  card.classList.add(turn);
   setTimeout(() => {
-    card.classList.remove('out-next', 'out-prev');
-    swap();
-    card.classList.add('in');
-    setTimeout(() => {
-      card.classList.remove('in');
-      animating = false;
-    }, 200);
-  }, 240);
+    card.classList.remove(turn);
+    if (dir > 0) swap();
+    animating = false;
+  }, 280);
 }
 
 $('#prev').addEventListener('click', () => go(state.current - 1, -1));
@@ -585,7 +586,7 @@ tabs.addEventListener('click', (e) => {
     save();
     go(state.lists.length - 1, 1);
     // name it right away once the new card is showing
-    setTimeout(() => { nameInput.focus(); nameInput.select(); }, reducedMotion() ? 0 : 480);
+    setTimeout(() => { nameInput.focus(); nameInput.select(); }, reducedMotion() ? 0 : 320);
     return;
   }
   const tab = e.target.closest('[data-index]');
@@ -647,7 +648,7 @@ function bringBack(id) {
   arr.splice(Math.min(d.index, arr.length), 0, { id: d.id, text: d.text });
   commit();
   list.querySelector(`[data-task="${CSS.escape(d.id)}"]`)?.classList.add('pop');
-  say('welcome back!');
+  say('back on the page');
 }
 
 $('#done-list').addEventListener('click', (e) => {
@@ -662,7 +663,7 @@ $('#clear-done').addEventListener('click', () => {
   offerUndo('finished list cleared', before);
 });
 
-peekBunny.addEventListener('click', () => say(['boop!', 'hehe', 'hi friend!', moodText()][Math.floor(Math.random() * 4)]));
+peekBunny.addEventListener('click', () => say(['hm?', 'yo.', 'need something?', moodText()][Math.floor(Math.random() * 4)]));
 
 // keep in sync across open tabs
 window.addEventListener('storage', (e) => {
@@ -674,8 +675,8 @@ window.addEventListener('storage', (e) => {
 // ---------- boot ----------
 
 mountSprites();
-document.documentElement.style.setProperty('--sprite-heart', spriteURL('heart'));
-$('#grass').style.backgroundImage = spriteURL('grass');
+document.documentElement.style.setProperty('--sprite-check', spriteURL('check'));
+document.documentElement.style.setProperty('--sprite-check-faint', spriteURL('checkFaint'));
 const today = new Date()
   .toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
   .toLowerCase();

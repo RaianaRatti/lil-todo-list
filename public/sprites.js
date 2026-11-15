@@ -2,148 +2,201 @@
 // "." is transparent. They're rendered to crisp SVG data URLs at runtime.
 
 export const PALETTE = {
-  k: '#4a3040', // outline (soft plum instead of black)
-  w: '#ffffff',
-  g: '#fbe9f1', // pale pink shade
-  p: '#ffc2d9',
-  P: '#ff8fb8',
-  b: '#ffb0c8', // blush
-  y: '#ffe07a',
-  Y: '#ffc94d',
-  G: '#8fd6a0',
-  D: '#5fae72',
-  r: '#ff6b8a',
-  l: '#dcc8ff',
-  L: '#b79cf2',
+  k: '#231d2b', // outline (inky plum-black)
+  w: '#fffaf0',
+  a: '#6e6b88', // bunny fur
+  A: '#a9a5c2', // fur highlight / inner ear
+  c: '#efe4cc', // cream
+  n: '#d98a8f', // nose
+  r: '#c8453b', // red (scarf, ribbon, ticks)
+  R: '#8f2e2c',
+  y: '#f0c75e', // gold
+  Y: '#c9962f',
+  t: '#4f7d73', // teal
+  T: '#33554d',
+  o: '#5a3a2e', // coffee
+  m: '#6c6684', // steam
+  s: '#4f7d73', // book spine
+  S: '#33554d',
 };
+
+// book spines for the shelf: w wide, h tall, gold bands near the ends and a label
+function spineRows(w, h) {
+  const fill = 'k' + 's'.repeat(w - 3) + 'Sk';
+  const band = 'k' + 'y'.repeat(w - 2) + 'k';
+  const label = 'k' + 'c'.repeat(w - 2) + 'k';
+  const edge = 'k'.repeat(w);
+  return Array.from({ length: h }, (_, y) => {
+    if (y === 0 || y === h - 1) return edge;
+    if (y === 2 || y === h - 4) return band;
+    if (y >= 5 && y <= 7) return label;
+    return fill;
+  });
+}
 
 export const SPRITES = {
   bunny: {
     rows: [
-      '....kk....kk....',
-      '...kwpk..kwpk...',
-      '...kwpk..kwpk...',
-      '...kwpk..kwpk...',
-      '...kwwk..kwwk...',
-      '..kkwwkkkkwwkk..',
-      '.kwwwwwwwwwwwwk.',
-      '.kwwkwwwwwwkwwk.',
-      '.kwwkwwwwwwkwwk.',
-      '.kbbwwwPPwwwbbk.',
-      '.kwwwwwkkwwwwwk.',
-      '..kwwwwwwwwwwk..',
-      '..kwwgwwwwgwwk..',
-      '.kwwwgwwwwgwwwk.',
-      '.kgwwwwwwwwwwgk.',
-      '..kkkkkkkkkkkk..',
+      '....kk..........',
+      '...kaak...kkkk..',
+      '...kaAk..kaaaak.',
+      '...kaAk..kaAkkk.',
+      '...kaAk..kaAk...',
+      '...kaAk..kaAk...',
+      '...kaAk..kaAk...',
+      '..kaaaaaaaaaak..',
+      '.kaaaaaaaaaaaak.',
+      '.kaakkaaaakkaak.',
+      '.kaawkaaaawkaak.',
+      '.kAaaccnnccaaAk.',
+      '..kaaccccccaak..',
+      '...kaaccccaak...',
+      '.krrrrrrrrrrrrk.',
+      '.kRRRRRrrRRRRrrk',
+      '.kaaaaarRaaaakrk',
+      '..kkkkkkkkkkk.k.',
     ],
   },
   bunnySleep: {
     rows: [
-      '................',
-      '................',
-      '..kkk......kkk..',
-      '.kwppkk..kkppwk.',
-      '..kkwwwkkwwwkk..',
-      '..kkwwwwwwwwkk..',
-      '.kwwwwwwwwwwwwk.',
-      '.kwwwwwwwwwwwwk.',
-      '.kwkkwwwwwwkkwk.',
-      '.kbbwwwPPwwwbbk.',
-      '.kwwwwwkkwwwwwk.',
-      '..kwwwwwwwwwwk..',
-      '..kwwgwwwwgwwk..',
-      '.kwwwgwwwwgwwwk.',
-      '.kgwwwwwwwwwwgk.',
-      '..kkkkkkkkkkkk..',
+      '....kk..........',
+      '...kaak...kkkk..',
+      '...kaAk..kaaaak.',
+      '...kaAk..kaAkkk.',
+      '...kaAk..kaAk...',
+      '...kaAk..kaAk...',
+      '...kaAk..kaAk...',
+      '..kaaaaaaaaaak..',
+      '.kaaaaaaaaaaaak.',
+      '.kaaaaaaaaaaaak.',
+      '.kaakkaaaakkaak.',
+      '.kAaaccnnccaaAk.',
+      '..kaaccccccaak..',
+      '...kaaccccaak...',
+      '.krrrrrrrrrrrrk.',
+      '.kRRRRRrrRRRRrrk',
+      '.kaaaaarRaaaakrk',
+      '..kkkkkkkkkkk.k.',
     ],
   },
-  flower: {
+  // section marker: a little bookmark
+  mark: {
     rows: [
-      '....kkk....',
-      '...kPppk...',
-      '...kpppk...',
-      '.kkkpppkkk.',
-      'kPppyyyppPk',
-      'kpppyYyppPk',
-      'kpppyyypppk',
-      '.kkkpppkkk.',
-      '...kpppk...',
-      '...kpPpk...',
-      '....kGk....',
-      '..kkkGk.kk.',
-      '.kGGkGkkGGk',
-      '..kkkGkGGk.',
-      '....kGkkk..',
-      '....kkk....',
+      'kkkkk',
+      'krrrk',
+      'krrrk',
+      'krRrk',
+      'krkrk',
+      'kk.kk',
     ],
   },
-  flowerLilac: { base: 'flower', pal: { p: '#dcc8ff', P: '#b79cf2' } },
-  flowerSun: { base: 'flower', pal: { p: '#ffe07a', P: '#ffc94d', y: '#ff8fb8', Y: '#ff6b8a' } },
-  heart: {
+  check: {
     rows: [
-      '.kk.kk.',
-      'kpwkppk',
-      'kwppPpk',
-      '.kpPPk.',
-      '..kPk..',
-      '...k...',
+      '......rr',
+      '.....rr.',
+      'rr..rr..',
+      '.rrrr...',
+      '..rr....',
     ],
   },
-  heartSolid: {
-    rows: [
-      '.PP.PP.',
-      'PwPPPPP',
-      'PPPPPPP',
-      '.PPPPP.',
-      '..PPP..',
-      '...P...',
-    ],
-  },
+  checkFaint: { base: 'check', pal: { r: '#cdbb94' } },
   sparkle: {
     rows: [
-      '..P..',
-      '..P..',
-      'PPwPP',
-      '..P..',
-      '..P..',
+      '..y..',
+      '..y..',
+      'yywyy',
+      '..y..',
+      '..y..',
     ],
   },
-  strawberry: {
+  spark: {
     rows: [
-      '...kkk...',
-      '.kkGGGkk.',
-      'kGGkGkGGk',
-      'krrkkkrrk',
-      'krwrrrwrk',
-      'krrrrrrrk',
-      '.krrwrrk.',
-      '..krrrk..',
-      '...krk...',
-      '....k....',
+      '.r.',
+      'rRr',
+      '.r.',
     ],
   },
-  cloud: {
+  dot: {
     rows: [
-      '.....kkkk.......',
-      '...kkwwwwk.kk...',
-      '..kwwwwwwwkwwk..',
-      '.kwwwwwwwwwwwwk.',
-      'kwwwwwwwwwwwwwgk',
-      'kgwwwwwwwwwwwggk',
-      '.kkkkkkkkkkkkkk.',
+      '.y.',
+      'yyy',
+      '.y.',
     ],
   },
-  bow: {
+  ribbon: {
     rows: [
-      'kk.....kk',
-      'kPkk.kkPk',
-      'kPPPkPPPk',
-      'kPkk.kkPk',
-      'kk.....kk',
+      'kRrrrk',
+      'kRrrrk',
+      'kRrrrk',
+      'kRrrrk',
+      'kRrrrk',
+      'kRrrrk',
+      'kRrrrk',
+      'kRrrrk',
+      'kRrrrk',
+      'kRrrrk',
+      'kRrrrk',
+      'kRrrrk',
+      'kRrrrk',
+      'kRrrrk',
+      'krkkrk',
+      'kk..kk',
+    ],
+  },
+  // brass corner protector for the book cover (flipped with CSS for the other corners)
+  corner: {
+    rows: [
+      'kkkkkkk',
+      'kyyyyk.',
+      'kyYyk..',
+      'kyyk...',
+      'kyk....',
+      'kk.....',
+      'k......',
+    ],
+  },
+  moon: {
+    pal: { y: '#f3e3a8', Y: '#d8c37e' },
+    rows: [
+      '...kkkk...',
+      '.kkyyyykk.',
+      '.kyyyYyyk.',
+      'kyyYyyyyyk',
+      'kyyyyyyYyk',
+      'kyYyyyyyyk',
+      'kyyyyYYyyk',
+      '.kyyyyyyk.',
+      '.kkyyyykk.',
+      '...kkkk...',
+    ],
+  },
+  pencil: {
+    rows: [
+      '.kkkkkkkkkkkk...',
+      'krrAyyyyyyyyck..',
+      'krrAYYYYYYYYcckk',
+      'krrAyyyyyyyyck..',
+      '.kkkkkkkkkkkk...',
+    ],
+  },
+  mug: {
+    rows: [
+      '..m...m.....',
+      '...m...m....',
+      '..m...m.....',
+      'kkkkkkkkk...',
+      'koooooook...',
+      'ktttttttkkk.',
+      'ktttttttk.k.',
+      'ktctttttk.k.',
+      'ktttttttkkk.',
+      'kTtttttTk...',
+      '.kTTTTTk....',
+      '..kkkkk.....',
     ],
   },
   carrot: {
+    pal: { Y: '#e07b39', G: '#6fa36b' },
     rows: [
       '....kk.kk',
       '...kGGkGk',
@@ -157,16 +210,22 @@ export const SPRITES = {
       'kk.......',
     ],
   },
-  grass: {
-    rows: [
-      '..G.....G...',
-      '.GGG...GGG.G',
-      'GGGGG.GGGGGG',
-      'DGDGGGGDGGDG',
-      'DDDDDDDDDDDD',
-    ],
-  },
+  spine: { rows: spineRows(6, 24) },
+  spineShort: { rows: spineRows(6, 18) },
+  spineWide: { rows: spineRows(8, 21) },
 };
+
+// colour variants of every spine shape: spineRed, spineShortPlum, ...
+const BOOK_COLORS = {
+  Red: { s: '#c8453b', S: '#8f2e2c' },
+  Gold: { s: '#d9a441', S: '#a87a2a', y: '#f4ecd8' },
+  Plum: { s: '#6f5a8e', S: '#4f3f68' },
+  Navy: { s: '#3f5f8a', S: '#2c4466' },
+  Brown: { s: '#8a5a3c', S: '#64402a' },
+};
+for (const shape of ['spine', 'spineShort', 'spineWide']) {
+  for (const [color, pal] of Object.entries(BOOK_COLORS)) SPRITES[shape + color] = { base: shape, pal };
+}
 
 function resolve(name) {
   const def = SPRITES[name];

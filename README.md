@@ -1,10 +1,11 @@
 # lil todo list
 
-A cute pixel-art todo list: pink highlights, white background, bunnies, flowers, hearts.
+A pixel-art todo list styled like a pocket journal: a leather-bound book on a dark desk,
+a bookshelf along the bottom, and a cool bunny in a red scarf keeping you on track.
 Plain static HTML/CSS/JS with no build step. Everything is saved in the browser (localStorage).
 
-- Several lists, each a labelled card in a deck. Flip through with the arrows, the label tabs,
-  the left/right arrow keys or a swipe. Click a card's label to rename it.
+- Several lists, each a page (chapter) in the book. Turn pages with the arrows, the index tabs,
+  the left/right arrow keys or a swipe. Click a chapter's name to rename it.
 - Tasks disappear as soon as you check them off (there's a 5-second undo).
 - Add **titles** inside a list ("add as: title") and put subtasks under each one.
 - Double-click any task or title to edit it.
@@ -38,7 +39,7 @@ Pick one:
 
 - `public/sprites.js`: all the pixel art, hand-drawn as character grids (edit them to make new
   sprites). `npm run favicon` regenerates `favicon.svg` and checks the sprite grids.
-- `public/app.js`: the app logic (lists, titles, subtasks, check-off, undo, editing, card flipping).
+- `public/app.js`: the app logic (lists, titles, subtasks, check-off, undo, editing, page turning).
 - `public/style.css`: pixel borders, colors and animations. Colors are variables at the top.
 
 ## Credits
