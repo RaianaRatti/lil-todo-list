@@ -1,14 +1,25 @@
 # lil todo list
 
-A pixel-art todo list styled like a pocket journal: a leather-bound book on a dark desk,
-a bookshelf along the bottom, and a cool bunny in a red scarf keeping you on track.
+A small, minimal pixel-art todo journal: cream pages framed in coloured book covers on a dark
+background, and a cool bunny in a red scarf keeping you on track.
 Plain static HTML/CSS/JS with no build step. Everything is saved in the browser (localStorage).
 
-- Several lists, each a page (chapter) in the book. Turn pages with the arrows, the index tabs,
-  the left/right arrow keys or a swipe. Click a chapter's name to rename it.
-- Tasks disappear as soon as you check them off (there's a 5-second undo).
-- Add **titles** inside a list ("add as: title") and put subtasks under each one.
+- Several **books** (say one for classes, one for everything else), each with its own title and
+  cover colour. On the shelf, slide between them with the arrows, the arrow keys or a swipe; click
+  a cover to open it, click its label to rename it. `< book name` above an open book (or esc) puts
+  it back on the shelf.
+- Inside a book, several lists, each a page. Turn pages with the tabs under the page, the
+  left/right arrow keys or a swipe. Click a list's name to rename it.
+- `+` on the tabs makes a new list; the bin next to the list name deletes it. Drag a tab to
+  reorder lists (press and hold first on touch screens), or focus one and press alt + an arrow key.
+- Enter (or `+`) adds a task. The bookmark button at the end of the row adds it as a section **title** instead;
+  the `+` on a title adds subtasks under it.
+- Tasks disappear as soon as you check them off (there's a 5-second undo). The little key at the
+  bottom of the page shows how many are left and done; click the tick to see finished tasks and
+  bring any of them back.
 - Double-click any task or title to edit it.
+- Light and dark themes: the sun / moon in the corner switches them. Until you pick one it follows
+  your system setting.
 
 ## Demo
 ![alt text](images/top-page.png)
@@ -40,6 +51,7 @@ Pick one:
 - `public/sprites.js`: all the pixel art, hand-drawn as character grids (edit them to make new
   sprites). `npm run favicon` regenerates `favicon.svg` and checks the sprite grids.
 - `public/app.js`: the app logic (lists, titles, subtasks, check-off, undo, editing, page turning).
+- `public/theme.js`: picks light or dark before the page paints, so it never flashes the wrong one.
 - `public/style.css`: pixel borders, colors and animations. Colors are variables at the top.
 
 ## Credits

@@ -1,7 +1,8 @@
 import { mountSprites, spriteURL, spriteSize } from './sprites.js';
 
-const KEY = 'lil-todos-v2';
-const OLD_KEY = 'lil-todos-v1';
+const KEY = 'lil-todos-v3';
+const V2_KEY = 'lil-todos-v2'; // one book's worth of lists
+const V1_KEY = 'lil-todos-v1'; // a single list
 
 const CHEERS = [
   'nice.', 'crossed off.', 'smooth.', 'one less thing', 'next!', 'too easy',
@@ -9,7 +10,6 @@ const CHEERS = [
 ];
 
 const $ = (sel) => document.querySelector(sel);
-const deck = $('#deck');
 const card = $('#card');
 const list = $('#list');
 const form = $('#new');
@@ -19,48 +19,66 @@ const tabs = $('#tabs');
 const bubble = $('#bubble');
 const peekBunny = $('#peek-bunny');
 const toast = $('#toast');
+const carousel = $('#carousel');
 
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()));
 const task = (text) => ({ id: uid(), text });
 const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 // ---------- state ----------
-// { current: index, mode: 'task' | 'title',
-//   lists: [{ id, name, tasks: [task], titles: [{ id, text, tasks: [task] }],
-//             done: [{ id, text, from: title id | null, fromText, index }], doneBefore: count }] }
+// { book: index of the book on the shelf, open: whether it's open,
+//   books: [{ id, name, cover: colour 0-5, current: index of the open list, lists: [list] }] }
+// list: { id, name, tasks: [task], titles: [{ id, text, tasks: [task] }],
+//         done: [{ id, text, from: title id | null, fromText, index }], doneBefore: count }
 // `done` is newest first; `doneBefore` counts finishes from before they were kept.
 
 const DONE_LIMIT = 200;
+const COVERS = 6;
 const newList = (name) => ({ id: uid(), name, tasks: [], titles: [], done: [], doneBefore: 0 });
+const newBook = (name, cover, lists) => ({ id: uid(), name, cover, current: 0, lists });
 
 function starterState() {
   return {
-    current: 0,
-    mode: 'task',
-    lists: [
-      {
-        id: uid(), name: 'today', done: [], doneBefore: 0,
-        tasks: [task('water the flowers'), task('be kind to yourself')],
-        titles: [
-          { id: uid(), text: 'groceries', tasks: [task('strawberries'), task('carrots for the bunny'), task('oat milk')] },
-          { id: uid(), text: 'self care', tasks: [task('drink a glass of water'), task('stretch for 5 min')] },
-        ],
-      },
-      {
-        id: uid(), name: 'someday', done: [], doneBefore: 0,
-        tasks: [task('learn to crochet')],
-        titles: [{ id: uid(), text: 'trips', tasks: [task('picnic in the park'), task('visit a flower farm')] }],
-      },
+    book: 0,
+    open: true,
+    books: [
+      newBook('life', 0, [
+        {
+          id: uid(), name: 'today', done: [], doneBefore: 0,
+          tasks: [task('water the flowers'), task('be kind to yourself')],
+          titles: [
+            { id: uid(), text: 'groceries', tasks: [task('strawberries'), task('carrots for the bunny'), task('oat milk')] },
+            { id: uid(), text: 'self care', tasks: [task('drink a glass of water'), task('stretch for 5 min')] },
+          ],
+        },
+        {
+          id: uid(), name: 'someday', done: [], doneBefore: 0,
+          tasks: [task('learn to crochet')],
+          titles: [{ id: uid(), text: 'trips', tasks: [task('picnic in the park'), task('visit a flower farm')] }],
+        },
+      ]),
+      newBook('classes', 1, [
+        {
+          id: uid(), name: 'this week', done: [], doneBefore: 0,
+          tasks: [task('email the study group')],
+          titles: [
+            { id: uid(), text: 'math', tasks: [task('problem set 3')] },
+            { id: uid(), text: 'history', tasks: [task('read chapter 4'), task('essay outline')] },
+          ],
+        },
+      ]),
     ],
   };
 }
 
-function normalize(raw) {
-  if (!raw || !Array.isArray(raw.lists) || !raw.lists.length) return null;
+const clampIndex = (i, arr) => Math.min(Math.max(Number(i) || 0, 0), arr.length - 1);
+
+function normalizeLists(raw) {
+  if (!Array.isArray(raw) || !raw.length) return null;
   const cleanTasks = (arr) => (Array.isArray(arr) ? arr : [])
     .filter((t) => t && typeof t.text === 'string')
     .map((t) => ({ id: String(t.id || uid()), text: t.text }));
-  const lists = raw.lists.map((l) => ({
+  return raw.map((l) => ({
     id: String(l.id || uid()),
     name: typeof l.name === 'string' && l.name.trim() ? l.name : 'my list',
     // older saves kept only a count of finished tasks
@@ -80,22 +98,41 @@ function normalize(raw) {
       .filter((t) => t && typeof t.text === 'string')
       .map((t) => ({ id: String(t.id || uid()), text: t.text, tasks: cleanTasks(t.tasks) })),
   }));
-  const current = Math.min(Math.max(Number(raw.current) || 0, 0), lists.length - 1);
-  return { current, mode: raw.mode === 'title' ? 'title' : 'task', lists };
+}
+
+function normalize(raw) {
+  if (!raw || !Array.isArray(raw.books)) return null;
+  const books = raw.books.map((b) => {
+    const lists = normalizeLists(b?.lists);
+    if (!lists) return null;
+    return {
+      id: String(b.id || uid()),
+      name: typeof b.name === 'string' && b.name.trim() ? b.name : 'my book',
+      cover: Math.abs(Math.trunc(Number(b.cover) || 0)) % COVERS,
+      current: clampIndex(b.current, lists),
+      lists,
+    };
+  }).filter(Boolean);
+  if (!books.length) return null;
+  return { book: clampIndex(raw.book, books), open: raw.open !== false, books };
 }
 
 function load() {
   try {
     const saved = normalize(JSON.parse(localStorage.getItem(KEY)));
     if (saved) return saved;
+    // lists from before there were books go into the first one
+    const v2 = JSON.parse(localStorage.getItem(V2_KEY));
+    const lists = normalizeLists(v2?.lists);
+    if (lists) return { book: 0, open: true, books: [{ ...newBook('my journal', 0, lists), current: clampIndex(v2.current, lists) }] };
     // carry over unfinished todos from the single-list version
-    const old = JSON.parse(localStorage.getItem(OLD_KEY));
+    const old = JSON.parse(localStorage.getItem(V1_KEY));
     if (Array.isArray(old) && old.length) {
       const tasks = old.filter((t) => t && !t.done && typeof t.text === 'string').map((t) => task(t.text));
-      return { current: 0, mode: 'task', lists: [{ ...newList('my list'), tasks }] };
+      return { book: 0, open: true, books: [newBook('my journal', 0, [{ ...newList('my list'), tasks }])] };
     }
   } catch {
-    // fall through to the starter lists
+    // fall through to the starter books
   }
   return null;
 }
@@ -114,7 +151,8 @@ let showDone = false;
 let rendering = false;
 let animating = false;
 
-const cur = () => state.lists[state.current];
+const bk = () => state.books[state.book];
+const cur = () => bk().lists[bk().current];
 
 // ---------- undo ----------
 
@@ -163,14 +201,19 @@ function moodText() {
 
 // ---------- rendering ----------
 
-function delButton(label) {
-  const del = document.createElement('button');
-  del.type = 'button';
-  del.className = 'del';
-  del.textContent = 'x';
-  del.setAttribute('aria-label', label);
-  return del;
+function iconButton(className, sprite, label) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = `icon-btn ${className}`;
+  b.setAttribute('aria-label', label);
+  const icon = document.createElement('i');
+  icon.dataset.sprite = sprite;
+  icon.dataset.scale = '2';
+  b.append(icon);
+  return b;
 }
+
+const delButton = (label) => iconButton('del', 'cross', label);
 
 function taskEl(t) {
   const li = document.createElement('li');
@@ -179,7 +222,6 @@ function taskEl(t) {
 
   const box = document.createElement('input');
   box.type = 'checkbox';
-  box.className = 'px';
   box.setAttribute('aria-label', `finish "${t.text}"`);
 
   const text = document.createElement('span');
@@ -195,8 +237,8 @@ function subForm(title) {
   f.className = 'sub-form';
   f.autocomplete = 'off';
   const field = document.createElement('input');
-  field.className = 'field px';
-  field.placeholder = `add to ${title.text}...`;
+  field.className = 'line-field';
+  field.placeholder = `add to ${title.text}`;
   field.maxLength = 140;
   field.setAttribute('aria-label', `New subtask under "${title.text}"`);
   f.append(field);
@@ -216,11 +258,12 @@ function groupEl(title) {
   mark.setAttribute('aria-hidden', 'true');
   const heading = document.createElement('h3');
   heading.className = 'title-text';
-  heading.title = 'click to add a subtask · double-click to rename';
+  heading.title = 'double-click to rename';
   const inner = document.createElement('span');
   inner.textContent = title.text;
   heading.append(inner);
-  row.append(mark, heading, delButton(`delete title "${title.text}" and its subtasks`));
+  const addSub = iconButton('add-sub', 'plus', `add a subtask under "${title.text}"`);
+  row.append(mark, heading, addSub, delButton(`delete title "${title.text}" and its subtasks`));
 
   const subs = document.createElement('ul');
   subs.className = 'subs';
@@ -237,24 +280,24 @@ function groupEl(title) {
 }
 
 function tabsRender() {
-  const newTab = document.createElement('button');
-  newTab.type = 'button';
-  newTab.className = 'chip px tab-new';
+  const newTab = iconButton('tab-new', 'plusPaper', 'New list');
   newTab.id = 'add-list';
-  newTab.textContent = '+ new list';
+  newTab.title = 'new list';
 
   tabs.replaceChildren(
-    ...state.lists.map((l, i) => {
+    ...bk().lists.map((l, i) => {
       const b = document.createElement('button');
       b.type = 'button';
-      b.className = 'chip px';
+      b.className = 'tab';
       b.dataset.index = i;
       b.textContent = l.name;
-      if (i === state.current) b.setAttribute('aria-current', 'true');
+      b.title = 'drag to reorder';
+      if (i === bk().current) b.setAttribute('aria-current', 'true');
       return b;
     }),
     newTab,
   );
+  mountSprites(tabs);
   const active = tabs.querySelector('[aria-current="true"]');
   if (active) tabs.scrollLeft = active.offsetLeft - tabs.clientWidth / 2 + active.offsetWidth / 2;
 }
@@ -266,28 +309,22 @@ function doneRender(l) {
     const li = document.createElement('li');
     li.className = 'done-item';
     li.dataset.done = d.id;
+    const tick = document.createElement('i');
+    tick.dataset.sprite = 'check';
+    tick.dataset.scale = '2';
+    tick.setAttribute('aria-hidden', 'true');
     const text = document.createElement('span');
     text.className = 'done-text';
     text.textContent = d.text;
-    const from = document.createElement('span');
-    from.className = 'done-from';
-    from.textContent = d.fromText ?? 'main list';
-    const back = document.createElement('button');
-    back.type = 'button';
-    back.className = 'link bring-back';
-    back.textContent = 'bring back';
-    back.setAttribute('aria-label', `bring back "${d.text}" to ${d.fromText ?? 'the main list'}`);
-    li.append(text, from, back);
+    const back = iconButton('bring-back', 'revert', `bring back "${d.text}"`);
+    back.title = 'bring back';
+    li.append(tick, text, back);
     return li;
   }));
+  mountSprites($('#done-list'));
   const older = $('#done-older');
   older.hidden = !l.doneBefore;
-  older.textContent = `+ ${l.doneBefore} older ${l.doneBefore === 1 ? 'one' : 'ones'} (from before they were saved)`;
-  $('#clear-done').hidden = !l.done.length;
-}
-
-function sizeName() {
-  nameInput.style.width = `calc(${Math.max(nameInput.value.length, 6) + 1}ch + 20px)`;
+  older.textContent = `+${l.doneBefore} older`;
 }
 
 function render() {
@@ -301,25 +338,27 @@ function render() {
   const finished = doneCount(l);
   $('#empty').hidden = !isEmpty;
   $('#empty-text').textContent = finished ? 'all done. the bunny is napping' : 'blank page...';
-  $('#count').textContent = `${remaining(l)} left${finished ? ' ·' : ''}`;
+  $('#count').textContent = remaining(l);
+  $('#done-count').textContent = finished;
   const showBtn = $('#show-done');
   showBtn.hidden = !finished;
-  showBtn.textContent = `${finished} done`;
   if (!finished) showDone = false;
   showBtn.setAttribute('aria-expanded', String(showDone));
+  $('#clear-done').hidden = !showDone || !l.done.length;
   doneRender(l);
-  syncMode();
 
   if (document.activeElement !== nameInput) nameInput.value = l.name;
-  sizeName();
-  $('#chapter').textContent = `ch. ${state.current + 1}`;
-  $('#pager').textContent = `- ${state.current + 1} -`;
-  $('#del-list').hidden = state.lists.length === 1;
-  $('#prev').disabled = $('#next').disabled = state.lists.length === 1;
-  deck.dataset.count = Math.min(state.lists.length, 3);
+  $('#del-list').hidden = bk().lists.length === 1;
   tabsRender();
 
-  if (openSubFor) list.querySelector('.sub-form .field')?.focus();
+  document.body.dataset.view = state.open ? 'book' : 'shelf';
+  $('#shelf-view').hidden = state.open;
+  $('#book').hidden = !state.open;
+  $('#book').dataset.cover = bk().cover;
+  $('#book-title').textContent = bk().name;
+  if (!state.open) shelfRender();
+
+  if (openSubFor) list.querySelector('.sub-form .line-field')?.focus();
   rendering = false;
 }
 
@@ -364,28 +403,13 @@ const findTitle = (id) => cur().titles.find((t) => t.id === id);
 
 // ---------- adding ----------
 
-function syncMode() {
-  document.querySelectorAll('[data-mode]').forEach((b) =>
-    b.setAttribute('aria-pressed', String(b.dataset.mode === state.mode)));
-  input.placeholder = state.mode === 'title' ? 'new title, e.g. groceries' : 'what needs doing?';
-}
-
-// remembered between visits, so the next add uses whatever you picked last
-function setMode(m) {
-  state.mode = m;
-  save();
-  syncMode();
-}
-
-document.querySelectorAll('[data-mode]').forEach((b) =>
-  b.addEventListener('click', () => { setMode(b.dataset.mode); input.focus(); }));
-
+// enter (or +) adds a task; the bookmark button adds it as a section title instead
 form.addEventListener('submit', (e) => {
   e.preventDefault();
   const text = input.value.trim();
   if (!text) return;
   input.value = '';
-  if (state.mode === 'title') {
+  if (e.submitter?.dataset.as === 'title') {
     const title = { id: uid(), text, tasks: [] };
     cur().titles.push(title);
     openSubFor = title.id; // jump straight into adding its subtasks
@@ -402,7 +426,7 @@ form.addEventListener('submit', (e) => {
 list.addEventListener('submit', (e) => {
   if (!e.target.matches('.sub-form')) return;
   e.preventDefault();
-  const text = e.target.querySelector('.field').value.trim();
+  const text = e.target.querySelector('.line-field').value.trim();
   const title = findTitle(e.target.closest('.group').dataset.title);
   if (!title) return;
   if (!text) return closeSubForm(e.target); // enter on an empty field means "done adding"
@@ -419,7 +443,7 @@ function openSubForm(group) {
   if (!title || !tail) return;
   openSubFor = title.id;
   if (!tail.querySelector('.sub-form')) tail.replaceChildren(subForm(title));
-  tail.querySelector('.field').focus();
+  tail.querySelector('.line-field').focus();
 }
 
 function closeSubForm(form) {
@@ -471,7 +495,7 @@ list.addEventListener('change', (e) => {
 });
 
 list.addEventListener('click', (e) => {
-  if (e.target.closest('.title-text')) {
+  if (e.target.closest('.title-text, .add-sub')) {
     openSubForm(e.target.closest('.group'));
     return;
   }
@@ -510,7 +534,7 @@ list.addEventListener('dblclick', (e) => {
 
 function startEdit(span, item, isTitle, nextUnder = null) {
   const field = document.createElement('input');
-  field.className = 'edit px' + (isTitle ? ' title-edit' : '');
+  field.className = 'edit' + (isTitle ? ' title-edit' : '');
   field.value = item.text;
   field.maxLength = 140;
   field.setAttribute('aria-label', 'Edit');
@@ -541,23 +565,22 @@ function startEdit(span, item, isTitle, nextUnder = null) {
 
 nameInput.addEventListener('input', () => {
   cur().name = nameInput.value.trim() || 'untitled';
-  sizeName();
   save();
   const tab = tabs.querySelector('[aria-current="true"]');
   if (tab) tab.textContent = cur().name;
 });
 nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') nameInput.blur(); });
-nameInput.addEventListener('blur', () => { nameInput.value = cur().name; sizeName(); });
+nameInput.addEventListener('blur', () => { nameInput.value = cur().name; });
 
-function go(index, dir = index > state.current ? 1 : -1) {
-  const n = state.lists.length;
+function go(index, dir = index > bk().current ? 1 : -1) {
+  const n = bk().lists.length;
   index = (index + n) % n;
-  if (index === state.current || animating) return;
+  if (index === bk().current || animating) return;
   openSubFor = null;
   showDone = false;
   if (document.activeElement === nameInput) nameInput.blur();
   const swap = () => {
-    state.current = index;
+    bk().current = index;
     commit();
     say(moodText());
   };
@@ -577,14 +600,13 @@ function go(index, dir = index > state.current ? 1 : -1) {
   }, 280);
 }
 
-$('#prev').addEventListener('click', () => go(state.current - 1, -1));
-$('#next').addEventListener('click', () => go(state.current + 1, 1));
 
 tabs.addEventListener('click', (e) => {
+  if (justDragged) return;
   if (e.target.closest('#add-list')) {
-    state.lists.push(newList(`list ${state.lists.length + 1}`));
+    bk().lists.push(newList(`list ${bk().lists.length + 1}`));
     save();
-    go(state.lists.length - 1, 1);
+    go(bk().lists.length - 1, 1);
     // name it right away once the new card is showing
     setTimeout(() => { nameInput.focus(); nameInput.select(); }, reducedMotion() ? 0 : 320);
     return;
@@ -593,22 +615,111 @@ tabs.addEventListener('click', (e) => {
   if (tab) go(Number(tab.dataset.index));
 });
 
+// ---------- reordering lists ----------
+// drag a tab along the others (hold it first on touch screens, so the strip can still scroll),
+// or focus a tab and press alt + an arrow key
+
+let drag = null;
+let justDragged = false;
+
+function moveList(from, to) {
+  const keep = cur();
+  const [moved] = bk().lists.splice(from, 1);
+  bk().lists.splice(to, 0, moved);
+  bk().current = bk().lists.indexOf(keep);
+  commit();
+}
+
+function startDrag() {
+  drag.active = true;
+  drag.tab.classList.add('dragging');
+  say('moving pages around');
+}
+
+tabs.addEventListener('pointerdown', (e) => {
+  const tab = e.target.closest('[data-index]');
+  if (!tab || e.button !== 0 || animating) return;
+  drag = { tab, x: e.clientX, y: e.clientY, active: false, touch: e.pointerType === 'touch' };
+  if (drag.touch) drag.hold = setTimeout(startDrag, 350);
+});
+
+window.addEventListener('pointermove', (e) => {
+  if (!drag) return;
+  if (!drag.active) {
+    const far = Math.hypot(e.clientX - drag.x, e.clientY - drag.y) > 8;
+    if (!far) return;
+    if (drag.touch) { clearTimeout(drag.hold); drag = null; return; } // it's a scroll, not a drag
+    startDrag();
+  }
+  const vertical = getComputedStyle(tabs).flexDirection === 'column';
+  const pos = vertical ? e.clientY : e.clientX;
+  const others = [...tabs.querySelectorAll('[data-index]')].filter((t) => t !== drag.tab);
+  const before = others.find((t) => {
+    const r = t.getBoundingClientRect();
+    return pos < (vertical ? r.top + r.height / 2 : r.left + r.width / 2);
+  });
+  tabs.insertBefore(drag.tab, before ?? $('#add-list'));
+});
+
+function endDrag() {
+  if (!drag) return;
+  const { tab, active, hold } = drag;
+  clearTimeout(hold);
+  drag = null;
+  if (!active) return;
+  tab.classList.remove('dragging');
+  justDragged = true; // the click that follows the drop shouldn't also open the tab
+  setTimeout(() => { justDragged = false; });
+  const order = [...tabs.querySelectorAll('[data-index]')].map((t) => Number(t.dataset.index));
+  const from = Number(tab.dataset.index);
+  const to = order.indexOf(from);
+  if (to === from) return render();
+  moveList(from, to);
+  say('reordered.');
+}
+window.addEventListener('pointerup', endDrag);
+window.addEventListener('pointercancel', endDrag);
+
+// once a touch drag has started, stop the tab strip from scrolling under your finger
+tabs.addEventListener('touchmove', (e) => { if (drag?.active) e.preventDefault(); }, { passive: false });
+tabs.addEventListener('contextmenu', (e) => { if (drag) e.preventDefault(); });
+
+tabs.addEventListener('keydown', (e) => {
+  const tab = e.target.closest('[data-index]');
+  if (!tab || !e.altKey) return;
+  const step = { ArrowLeft: -1, ArrowUp: -1, ArrowRight: 1, ArrowDown: 1 }[e.key];
+  if (!step) return;
+  e.preventDefault();
+  const from = Number(tab.dataset.index);
+  const to = from + step;
+  if (to < 0 || to >= bk().lists.length) return;
+  moveList(from, to);
+  tabs.querySelector(`[data-index="${to}"]`)?.focus();
+});
+
 $('#del-list').addEventListener('click', () => {
-  if (state.lists.length === 1) return;
+  if (bk().lists.length === 1) return;
   const before = JSON.stringify(state);
   const name = cur().name;
-  state.lists.splice(state.current, 1);
-  state.current = Math.min(state.current, state.lists.length - 1);
+  bk().lists.splice(bk().current, 1);
+  bk().current = Math.min(bk().current, bk().lists.length - 1);
   commit();
   offerUndo(`"${name}" deleted`, before);
   say(moodText());
 });
 
-// arrow keys flip cards when you're not typing
+// arrow keys slide between books on the shelf and turn pages in an open one,
+// when you're not typing; escape closes the book
 document.addEventListener('keydown', (e) => {
   if (e.target.closest('input, textarea') || e.altKey || e.metaKey || e.ctrlKey) return;
-  if (e.key === 'ArrowLeft') go(state.current - 1, -1);
-  if (e.key === 'ArrowRight') go(state.current + 1, 1);
+  if (!state.open) {
+    if (e.key === 'ArrowLeft') slideTo(state.book - 1);
+    if (e.key === 'ArrowRight') slideTo(state.book + 1);
+    return;
+  }
+  if (e.key === 'Escape') closeBook();
+  if (e.key === 'ArrowLeft') go(bk().current - 1, -1);
+  if (e.key === 'ArrowRight') go(bk().current + 1, 1);
 });
 
 // swipe the card on touch screens
@@ -618,7 +729,191 @@ card.addEventListener('touchend', (e) => {
   if (touchX === null) return;
   const dx = e.changedTouches[0].clientX - touchX;
   touchX = null;
-  if (Math.abs(dx) > 60) go(state.current + (dx < 0 ? 1 : -1), dx < 0 ? 1 : -1);
+  if (Math.abs(dx) > 60) go(bk().current + (dx < 0 ? 1 : -1), dx < 0 ? 1 : -1);
+});
+
+// ---------- books ----------
+
+const ornament = (sprite, scale, className) => {
+  const i = document.createElement('i');
+  i.className = className;
+  i.dataset.sprite = sprite;
+  i.dataset.scale = scale;
+  i.setAttribute('aria-hidden', 'true');
+  return i;
+};
+
+// a gilt cover: double gold frame (CSS), leafy corners, and the title plate between two vines
+function coverEl() {
+  const el = document.createElement('div');
+  el.className = 'cover';
+  for (const corner of ['tl', 'tr', 'bl', 'br']) el.append(ornament('corner', '2', `corner ${corner}`));
+  const plate = document.createElement('div');
+  plate.className = 'plate px';
+  const name = document.createElement('input');
+  name.className = 'book-name';
+  name.maxLength = 24;
+  name.spellcheck = false;
+  name.setAttribute('aria-label', 'Book title');
+  plate.append(name);
+  el.append(ornament('vine', '3', 'vine'), plate, ornament('vine', '3', 'vine vine-under'));
+  return el;
+}
+
+function newCoverEl() {
+  const el = iconButton('cover cover-new', 'plusPaper', 'New book');
+  el.title = 'new book';
+  el.querySelector('i').dataset.scale = '4';
+  return el;
+}
+
+// slides keep working because the covers are only rebuilt when books come or go
+function shelfRender() {
+  const key = state.books.map((b) => b.id).join();
+  if (carousel.dataset.key !== key) {
+    carousel.replaceChildren(...state.books.map(coverEl), newCoverEl());
+    mountSprites(carousel);
+    carousel.dataset.key = key;
+  }
+  [...carousel.children].forEach((el, i) => {
+    const d = i - state.book;
+    el.dataset.pos = d === 0 ? 'center' : d === -1 ? 'left' : d === 1 ? 'right' : d < 0 ? 'far-left' : 'far-right';
+    el.dataset.index = i;
+    const b = state.books[i];
+    if (!b) return;
+    const center = d === 0;
+    el.dataset.cover = b.cover;
+    el.tabIndex = center ? 0 : -1;
+    el.setAttribute('role', 'button');
+    el.setAttribute('aria-label', center ? `open "${b.name}"` : b.name);
+    const name = el.querySelector('.book-name');
+    if (document.activeElement !== name) name.value = b.name;
+    name.readOnly = !center;
+    name.tabIndex = center ? 0 : -1;
+  });
+
+  $('#swatches').querySelectorAll('[data-cover]').forEach((s) =>
+    s.setAttribute('aria-pressed', String(Number(s.dataset.cover) === bk().cover)));
+  $('#del-book').hidden = state.books.length === 1;
+  $('#book-prev').disabled = state.book === 0;
+  $('#book-next').disabled = state.book === state.books.length - 1;
+}
+
+function slideTo(i) {
+  if (animating || i < 0 || i >= state.books.length || i === state.book) return;
+  if (document.activeElement?.matches('.book-name')) document.activeElement.blur();
+  state.book = i;
+  showDone = false;
+  openSubFor = null;
+  commit();
+}
+
+function openBook() {
+  if (animating) return;
+  const reveal = () => {
+    state.open = true;
+    showDone = false;
+    openSubFor = null;
+    commit();
+    say(moodText());
+  };
+  if (reducedMotion()) return reveal();
+  // the cover swings open at the spine, then the first page settles in
+  animating = true;
+  const cover = carousel.children[state.book];
+  cover.classList.add('opening');
+  setTimeout(() => {
+    cover.classList.remove('opening');
+    reveal();
+    card.classList.add('turn-in');
+    setTimeout(() => { card.classList.remove('turn-in'); animating = false; }, 280);
+  }, 320);
+}
+
+function closeBook() {
+  if (animating) return;
+  if (document.activeElement === nameInput) nameInput.blur();
+  state.open = false;
+  commit();
+  if (reducedMotion()) return;
+  const cover = carousel.children[state.book];
+  cover.classList.add('closing');
+  setTimeout(() => cover.classList.remove('closing'), 320);
+}
+
+$('#close-book').addEventListener('click', closeBook);
+$('#book-prev').addEventListener('click', () => slideTo(state.book - 1));
+$('#book-next').addEventListener('click', () => slideTo(state.book + 1));
+
+carousel.addEventListener('click', (e) => {
+  const cover = e.target.closest('.cover');
+  if (!cover) return;
+  if (cover.classList.contains('cover-new')) {
+    state.books.push(newBook('new book', state.books.length % COVERS, [newList('notes')]));
+    slideTo(state.books.length - 1);
+    // name it right away once it has slid into the middle
+    setTimeout(() => {
+      const name = carousel.children[state.book]?.querySelector('.book-name');
+      name?.focus();
+      name?.select();
+    }, reducedMotion() ? 0 : 320);
+    return;
+  }
+  const i = Number(cover.dataset.index);
+  if (i !== state.book) return slideTo(i);
+  if (!e.target.closest('.book-name')) openBook();
+});
+
+carousel.addEventListener('keydown', (e) => {
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.cover[data-pos="center"]:not(.cover-new)')) {
+    e.preventDefault();
+    openBook();
+  }
+  if (e.key === 'Enter' && e.target.matches('.book-name')) e.target.blur();
+});
+
+carousel.addEventListener('input', (e) => {
+  if (!e.target.matches('.book-name')) return;
+  bk().name = e.target.value.trim() || 'untitled';
+  save();
+});
+carousel.addEventListener('focusout', (e) => {
+  if (e.target.matches('.book-name')) e.target.value = bk().name;
+});
+
+$('#swatches').replaceChildren(...Array.from({ length: COVERS }, (_, i) => {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'swatch';
+  b.dataset.cover = i;
+  b.setAttribute('aria-label', `cover colour ${i + 1}`);
+  return b;
+}));
+$('#swatches').addEventListener('click', (e) => {
+  const s = e.target.closest('[data-cover]');
+  if (!s) return;
+  bk().cover = Number(s.dataset.cover);
+  commit();
+});
+
+$('#del-book').addEventListener('click', () => {
+  if (state.books.length === 1) return;
+  const before = JSON.stringify(state);
+  const name = bk().name;
+  state.books.splice(state.book, 1);
+  state.book = Math.min(state.book, state.books.length - 1);
+  commit();
+  offerUndo(`"${name}" deleted`, before);
+});
+
+// swipe between books on touch screens
+let shelfTouchX = null;
+carousel.addEventListener('touchstart', (e) => { shelfTouchX = e.touches[0].clientX; }, { passive: true });
+carousel.addEventListener('touchend', (e) => {
+  if (shelfTouchX === null) return;
+  const dx = e.changedTouches[0].clientX - shelfTouchX;
+  shelfTouchX = null;
+  if (Math.abs(dx) > 50) slideTo(state.book + (dx < 0 ? 1 : -1));
 });
 
 // ---------- finished tasks ----------
@@ -672,6 +967,33 @@ window.addEventListener('storage', (e) => {
   render();
 });
 
+// ---------- light / dark ----------
+
+const THEME_KEY = 'lil-todos-theme';
+const root = document.documentElement;
+
+function applyTheme(theme) {
+  root.dataset.theme = theme;
+  const other = theme === 'light' ? 'dark' : 'light';
+  const toggle = $('#theme-toggle');
+  toggle.setAttribute('aria-label', `Switch to ${other} mode`);
+  toggle.title = `${other} mode`;
+  document.querySelector('meta[name="theme-color"]').content = getComputedStyle(root).getPropertyValue('--bg').trim();
+}
+
+$('#theme-toggle').addEventListener('click', () => {
+  const theme = root.dataset.theme === 'light' ? 'dark' : 'light';
+  try { localStorage.setItem(THEME_KEY, theme); } catch { /* still switches for this visit */ }
+  applyTheme(theme);
+});
+
+// until you pick one, follow the system setting as it changes
+matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {
+  let saved = null;
+  try { saved = localStorage.getItem(THEME_KEY); } catch { /* treat as unset */ }
+  if (!saved) applyTheme(e.matches ? 'light' : 'dark');
+});
+
 // ---------- boot ----------
 
 mountSprites();
@@ -682,5 +1004,6 @@ const today = new Date()
   .toLowerCase();
 $('#date').textContent = today[0].toUpperCase() + today.slice(1);
 
+applyTheme(root.dataset.theme === 'light' ? 'light' : 'dark');
 render();
 bubble.textContent = moodText();

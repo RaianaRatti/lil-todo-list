@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "A pixel-art pocket journal todo list, kept by a cool bunny.",
+  "description": "A tiny pixel-art todo journal, kept by a cool bunny.",
   "scripts": {
     "dev": "npx wrangler@latest dev",
     "deploy": "npx wrangler@latest deploy",

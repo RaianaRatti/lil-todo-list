@@ -12,27 +12,7 @@ export const PALETTE = {
   R: '#8f2e2c',
   y: '#f0c75e', // gold
   Y: '#c9962f',
-  t: '#4f7d73', // teal
-  T: '#33554d',
-  o: '#5a3a2e', // coffee
-  m: '#6c6684', // steam
-  s: '#4f7d73', // book spine
-  S: '#33554d',
 };
-
-// book spines for the shelf: w wide, h tall, gold bands near the ends and a label
-function spineRows(w, h) {
-  const fill = 'k' + 's'.repeat(w - 3) + 'Sk';
-  const band = 'k' + 'y'.repeat(w - 2) + 'k';
-  const label = 'k' + 'c'.repeat(w - 2) + 'k';
-  const edge = 'k'.repeat(w);
-  return Array.from({ length: h }, (_, y) => {
-    if (y === 0 || y === h - 1) return edge;
-    if (y === 2 || y === h - 4) return band;
-    if (y >= 5 && y <= 7) return label;
-    return fill;
-  });
-}
 
 export const SPRITES = {
   bunny: {
@@ -100,6 +80,116 @@ export const SPRITES = {
     ],
   },
   checkFaint: { base: 'check', pal: { r: '#cdbb94' } },
+  // little one-colour icons for buttons
+  box: {
+    rows: [
+      'kkkkkkk',
+      'k.....k',
+      'k.....k',
+      'k.....k',
+      'k.....k',
+      'k.....k',
+      'kkkkkkk',
+    ],
+  },
+  plus: {
+    rows: [
+      '..k..',
+      '..k..',
+      'kkkkk',
+      '..k..',
+      '..k..',
+    ],
+  },
+  plusPaper: { base: 'plus', pal: { k: '#f4ecd8' } },
+  cross: {
+    rows: [
+      'k...k',
+      '.k.k.',
+      '..k..',
+      '.k.k.',
+      'k...k',
+    ],
+  },
+  trash: {
+    rows: [
+      '...kkk...',
+      'kkkkkkkkk',
+      '.........',
+      '.kkkkkkk.',
+      '.k.k.k.k.',
+      '.k.k.k.k.',
+      '.k.k.k.k.',
+      '.k.k.k.k.',
+      '.kkkkkkk.',
+    ],
+  },
+  trashLight: { base: 'trash', pal: { k: '#efe4cc' } },
+  revert: {
+    rows: [
+      '..k......',
+      '.kk......',
+      'kkkkkkk..',
+      '.kk....k.',
+      '..k.....k',
+      '........k',
+      '.......k.',
+      '..kkkkk..',
+    ],
+  },
+  revertGold: { base: 'revert', pal: { k: '#e0b24c' } },
+  // gold scrollwork for the book covers and the header
+  vine: {
+    rows: [
+      '.......Y.....y.....Y.......',
+      '.yy.....yy..yYy..yy.....yy.',
+      'y..y.....yY..y..Yy.....y..y',
+      'y.yyyyyyyyyyyyyyyyyyyyyyy.y',
+      'y.....Yy.....Y.....yY.....y',
+      '.yy..yy.............yy..yy.',
+      '....Y.................Y....',
+    ],
+  },
+  // a gold stud with a leafy sprig along each edge, for the top-left corner
+  // (flipped with CSS for the others)
+  corner: {
+    rows: [
+      'yyy..Y..',
+      'yYyyyyY.',
+      'yyy..y..',
+      '.y......',
+      '.y.Y....',
+      'Yy......',
+      '.y......',
+      '.Y......',
+    ],
+  },
+  // light / dark toggle
+  sun: {
+    rows: [
+      '....y....',
+      '.y.....y.',
+      '...yyy...',
+      '..yyyyy..',
+      'y.yyyyy.y',
+      '..yyyyy..',
+      '...yyy...',
+      '.y.....y.',
+      '....y....',
+    ],
+  },
+  moon: {
+    rows: [
+      '..kkk...',
+      '.kk.....',
+      'kk......',
+      'kk......',
+      'kk......',
+      'kk.....k',
+      '.kk..kk.',
+      '..kkkk..',
+    ],
+  },
   sparkle: {
     rows: [
       '..y..',
@@ -116,116 +206,7 @@ export const SPRITES = {
       '.r.',
     ],
   },
-  dot: {
-    rows: [
-      '.y.',
-      'yyy',
-      '.y.',
-    ],
-  },
-  ribbon: {
-    rows: [
-      'kRrrrk',
-      'kRrrrk',
-      'kRrrrk',
-      'kRrrrk',
-      'kRrrrk',
-      'kRrrrk',
-      'kRrrrk',
-      'kRrrrk',
-      'kRrrrk',
-      'kRrrrk',
-      'kRrrrk',
-      'kRrrrk',
-      'kRrrrk',
-      'kRrrrk',
-      'krkkrk',
-      'kk..kk',
-    ],
-  },
-  // brass corner protector for the book cover (flipped with CSS for the other corners)
-  corner: {
-    rows: [
-      'kkkkkkk',
-      'kyyyyk.',
-      'kyYyk..',
-      'kyyk...',
-      'kyk....',
-      'kk.....',
-      'k......',
-    ],
-  },
-  moon: {
-    pal: { y: '#f3e3a8', Y: '#d8c37e' },
-    rows: [
-      '...kkkk...',
-      '.kkyyyykk.',
-      '.kyyyYyyk.',
-      'kyyYyyyyyk',
-      'kyyyyyyYyk',
-      'kyYyyyyyyk',
-      'kyyyyYYyyk',
-      '.kyyyyyyk.',
-      '.kkyyyykk.',
-      '...kkkk...',
-    ],
-  },
-  pencil: {
-    rows: [
-      '.kkkkkkkkkkkk...',
-      'krrAyyyyyyyyck..',
-      'krrAYYYYYYYYcckk',
-      'krrAyyyyyyyyck..',
-      '.kkkkkkkkkkkk...',
-    ],
-  },
-  mug: {
-    rows: [
-      '..m...m.....',
-      '...m...m....',
-      '..m...m.....',
-      'kkkkkkkkk...',
-      'koooooook...',
-      'ktttttttkkk.',
-      'ktttttttk.k.',
-      'ktctttttk.k.',
-      'ktttttttkkk.',
-      'kTtttttTk...',
-      '.kTTTTTk....',
-      '..kkkkk.....',
-    ],
-  },
-  carrot: {
-    pal: { Y: '#e07b39', G: '#6fa36b' },
-    rows: [
-      '....kk.kk',
-      '...kGGkGk',
-      '....kGGk.',
-      '...kYYk..',
-      '..kYkYk..',
-      '..kYYYk..',
-      '.kYkYk...',
-      '.kYYk....',
-      'kYk......',
-      'kk.......',
-    ],
-  },
-  spine: { rows: spineRows(6, 24) },
-  spineShort: { rows: spineRows(6, 18) },
-  spineWide: { rows: spineRows(8, 21) },
 };
-
-// colour variants of every spine shape: spineRed, spineShortPlum, ...
-const BOOK_COLORS = {
-  Red: { s: '#c8453b', S: '#8f2e2c' },
-  Gold: { s: '#d9a441', S: '#a87a2a', y: '#f4ecd8' },
-  Plum: { s: '#6f5a8e', S: '#4f3f68' },
-  Navy: { s: '#3f5f8a', S: '#2c4466' },
-  Brown: { s: '#8a5a3c', S: '#64402a' },
-};
-for (const shape of ['spine', 'spineShort', 'spineWide']) {
-  for (const [color, pal] of Object.entries(BOOK_COLORS)) SPRITES[shape + color] = { base: shape, pal };
-}
 
 function resolve(name) {
   const def = SPRITES[name];
